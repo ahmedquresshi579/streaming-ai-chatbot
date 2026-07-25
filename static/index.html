@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Chat</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,500&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #14161f;
+    --bg-soft: #1b1e29;
+    --panel: #1e212c;
+    --panel-border: #2a2e3c;
+    --amber: #e8a33d;
+    --amber-dim: #a8762c;
+    --paper: #262a38;
+    --paper-text: #ece8dd;
+    --muted: #7d8296;
+    --muted-dim: #565b6e;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    height: 100%;
+    margin: 0;
+    background: var(--bg);
+    font-family: 'Inter', -apple-system, sans-serif;
+    color: var(--paper-text);
+  }
+
+  body {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background-image:
+      radial-gradient(circle at 20% -10%, rgba(232, 163, 61, 0.08), transparent 45%),
+      radial-gradient(circle at 100% 100%, rgba(232, 163, 61, 0.04), transparent 40%);
+  }
+
+  .app {
+    width: 100%;
+    max-width: 640px;
+    height: 88vh;
+    max-height: 820px;
+    background: var(--bg-soft);
+    border: 1px solid var(--panel-border);
+    border-radius: 18px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-shadow: 0 40px 80px -30px rgba(0,0,0,0.6);
+  }
+
+  .header {
+    padding: 22px 26px 18px;
+    border-bottom: 1px solid var(--panel-border);
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+  }
+
+  .header-left .eyebrow {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin: 0 0 6px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .pulse-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--amber);
+    animation: pulse 2.4s infinite;
+  }
+
+  @keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(232, 163, 61, 0.45); }
+    70% { box-shadow: 0 0 0 6px rgba(232, 163, 61, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(232, 163, 61, 0); }
+  }
+
+  .header-left h1 {
+    font-family: 'Fraunces', serif;
+    font-weight: 500;
+    font-size: 26px;
+    margin: 0;
+    color: #fff;
+    letter-spacing: -0.01em;
+  }
+
+  .reset-btn {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    background: none;
+    border: 1px solid var(--panel-border);
+    color: var(--muted);
+    padding: 7px 12px;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  .reset-btn:hover { color: var(--amber); border-color: var(--amber-dim); }
+  .reset-btn:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
+
+  .chat-window {
+    flex: 1;
+    overflow-y: auto;
+    padding: 24px 26px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .chat-window::-webkit-scrollbar { width: 5px; }
+  .chat-window::-webkit-scrollbar-thumb { background: var(--panel-border); border-radius: 3px; }
+
+  .empty-state {
+    margin: auto;
+    text-align: center;
+    color: var(--muted-dim);
+    font-size: 14px;
+    max-width: 260px;
+    line-height: 1.6;
+  }
+  .empty-state .eyebrow {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted-dim);
+    margin-bottom: 8px;
+  }
+
+  .row { display: flex; animation: rise 0.28s ease; }
+  .row.user { justify-content: flex-end; }
+  .row.assistant { justify-content: flex-start; }
+
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .bubble {
+    max-width: 78%;
+    padding: 11px 16px;
+    border-radius: 14px;
+    font-size: 14.5px;
+    line-height: 1.55;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  .bubble.user {
+    background: var(--amber);
+    color: #201607;
+    border-bottom-right-radius: 4px;
+    font-weight: 500;
+  }
+
+  .bubble.assistant {
+    background: var(--paper);
+    color: var(--paper-text);
+    border: 1px solid var(--panel-border);
+    border-bottom-left-radius: 4px;
+  }
+
+  .bubble.error {
+    background: transparent;
+    border: 1px solid #7a3535;
+    color: #e39b9b;
+  }
+
+  .composing {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    color: var(--muted);
+    padding: 4px 2px;
+  }
+  .composing .pulse-dot { width: 5px; height: 5px; }
+
+  .input-bar {
+    border-top: 1px solid var(--panel-border);
+    padding: 16px 20px;
+    background: var(--bg-soft);
+  }
+
+  .input-form {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    border-radius: 26px;
+    padding: 6px 6px 6px 18px;
+    transition: border-color 0.15s ease;
+  }
+  .input-form:focus-within {
+    border-color: var(--amber-dim);
+  }
+
+  .input-form input {
+    flex: 1;
+    background: none;
+    border: none;
+    outline: none;
+    color: var(--paper-text);
+    font-family: 'Inter', sans-serif;
+    font-size: 14.5px;
+    padding: 8px 0;
+  }
+  .input-form input::placeholder { color: var(--muted-dim); }
+
+  .send-btn {
+    width: 38px;
+    height: 38px;
+    min-width: 38px;
+    border-radius: 50%;
+    background: var(--amber-dim);
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 0.18s ease, box-shadow 0.18s ease, transform 0.1s ease;
+    color: #1a1206;
+  }
+  .send-btn:hover:not(:disabled) {
+    background: var(--amber);
+    box-shadow: 0 0 18px 2px rgba(232, 163, 61, 0.45);
+  }
+  .send-btn:active:not(:disabled) { transform: scale(0.94); }
+  .send-btn:disabled { opacity: 0.35; cursor: default; }
+  .send-btn:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .pulse-dot, .row { animation: none; }
+  }
+
+  @media (max-width: 480px) {
+    body { padding: 0; }
+    .app { height: 100vh; max-height: none; border-radius: 0; border: none; }
+    .bubble { max-width: 86%; }
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <div class="header">
+    <div class="header-left">
+      <p class="eyebrow"><span class="pulse-dot"></span>Session live</p>
+      <h1>AI Chat</h1>
+    </div>
+    <button id="reset-btn" class="reset-btn">Clear</button>
+  </div>
+
+  <div id="chat-window" class="chat-window">
+    <div class="empty-state">
+      <p class="eyebrow">— nothing logged yet —</p>
+      Write the first line. The reply streams back in real time.
+    </div>
+  </div>
+
+  <div class="input-bar">
+    <form id="chat-form" class="input-form">
+      <input
+        id="message-input"
+        type="text"
+        autocomplete="off"
+        placeholder="Say something..."
+      />
+      <button type="submit" id="send-btn" class="send-btn" aria-label="Send message">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M4 12L20 4L13 20L11 13L4 12Z" fill="currentColor"/>
+        </svg>
+      </button>
+    </form>
+  </div>
+</div>
+
+<script>
+const chatWindow = document.getElementById('chat-window');
+const chatForm = document.getElementById('chat-form');
+const messageInput = document.getElementById('message-input');
+const sendBtn = document.getElementById('send-btn');
+const resetBtn = document.getElementById('reset-btn');
+
+function clearEmptyState() {
+  const el = chatWindow.querySelector('.empty-state');
+  if (el) el.remove();
+}
+
+function addMessage(role, text) {
+  clearEmptyState();
+  const row = document.createElement('div');
+  row.className = `row ${role}`;
+
+  const bubble = document.createElement('div');
+  bubble.className = `bubble ${role}`;
+  bubble.textContent = text;
+
+  row.appendChild(bubble);
+  chatWindow.appendChild(row);
+  chatWindow.scrollTop = chatWindow.scrollHeight;
+  return bubble;
+}
+
+function addComposingStatus() {
+  clearEmptyState();
+  const row = document.createElement('div');
+  row.className = 'row assistant';
+  row.id = 'composing-row';
+  row.innerHTML = `
+    <div class="composing">
+      <span class="pulse-dot"></span>
+      composing…
+    </div>
+  `;
+  chatWindow.appendChild(row);
+  chatWindow.scrollTop = chatWindow.scrollHeight;
+}
+
+function removeComposingStatus() {
+  const el = document.getElementById('composing-row');
+  if (el) el.remove();
+}
+
+async function sendMessage(message) {
+  addMessage('user', message);
+  messageInput.value = '';
+  sendBtn.disabled = true;
+  addComposingStatus();
+
+  try {
+    const response = await fetch('/chat/stream', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message }),
+    });
+
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({ detail: 'Unknown error' }));
+      throw new Error(err.detail || 'Request failed');
+    }
+
+    removeComposingStatus();
+    const assistantBubble = addMessage('assistant', '');
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n\n');
+      buffer = lines.pop();
+
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        const data = line.slice(6);
+        if (data === '[DONE]') continue;
+
+        try {
+          const parsed = JSON.parse(data);
+          if (parsed.error) {
+            assistantBubble.textContent = `Error: ${parsed.error}`;
+            assistantBubble.classList.add('error');
+            return;
+          }
+          if (parsed.content) {
+            assistantBubble.textContent += parsed.content;
+            chatWindow.scrollTop = chatWindow.scrollHeight;
+          }
+        } catch (e) {}
+      }
+    }
+  } catch (err) {
+    removeComposingStatus();
+    const bubble = addMessage('assistant', `Something went wrong: ${err.message}`);
+    bubble.classList.add('error');
+  } finally {
+    sendBtn.disabled = false;
+    messageInput.focus();
+  }
+}
+
+chatForm.addEventListener('submit', (e) => {
+  e.preventDefault();
+  const message = messageInput.value.trim();
+  if (!message) return;
+  sendMessage(message);
+});
+
+resetBtn.addEventListener('click', async () => {
+  await fetch('/reset', { method: 'POST' });
+  chatWindow.innerHTML = `
+    <div class="empty-state">
+      <p class="eyebrow">— nothing logged yet —</p>
+      Write the first line. The reply streams back in real time.
+    </div>
+  `;
+});
+</script>
+
+</body>
+</html>
