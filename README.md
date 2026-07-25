@@ -1,3 +1,7 @@
+
+
+https://github.com/user-attachments/assets/72f1cca0-abb3-4ed3-9b95-84759145ba34
+
 # AI Chat API
 
 A lightweight chat application built with **FastAPI** and the **Mistral AI API**, featuring real-time streaming responses, in-memory conversation history, and a custom-designed frontend.
